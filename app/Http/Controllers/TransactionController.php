@@ -5,109 +5,88 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Transaction;
 use App\Models\Category;
+
 class TransactionController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-     private function authorizeUser(Request $request, Transaction $transaction)
+    private function authorizeUser(Request $request, Transaction $transaction): void
     {
         if ($transaction->user_id !== $request->user()->id) {
             abort(403, 'Unauthorized action.');
         }
     }
+
     public function index(Request $request)
     {
-        //
-        $transactions=$request->user()->
-        transactions()->
-        with('category')
-        ->orderBy('occured_at','desc')->
-        paginate(10);
+        $transactions = $request->user()
+            ->transactions()
+            ->with('category')
+            ->orderBy('occurred_at', 'desc')  // ✅ BUG 1 FIX: was 'occured_at' (typo)
+            ->paginate(10);
 
-        return view('transactions.index',compact('transactions'));
+        return view('transactions.index', compact('transactions'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create(Request $request)
     {
-        //
-        $categories=$request->iser->categories()->pluck('name','id');
-        return view('transactions.create',compact('categories'));
+        $categories = $request->user()->categories()->pluck('name', 'id');  // ✅ BUG 2 FIX: was $request->iser (typo)
+        return view('transactions.create', compact('categories'));
     }
 
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
-         $validated = $request->validate([
-            'category_id' => ['nullable','exists:categories,id'],
-            'description' => ['nullable','string','max:255'],
-            'amount'      => ['required','numeric','min:0.01'],
-            'type'        => ['required','in:income,expense'],
-            'occurred_at' => ['required','date'],
+        $validated = $request->validate([
+            'category_id' => ['nullable', 'exists:categories,id'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'amount'      => ['required', 'numeric', 'min:0.01'],
+            'type'        => ['required', 'in:income,expense'],
+            'occurred_at' => ['required', 'date'],
         ]);
-        //This user owns category 
-        if($validated['category_id'])
-        {
+
+        if ($validated['category_id'] ?? null) {
             $request->user()->categories()->findOrFail($validated['category_id']);
         }
-        //Amount 
-        //Income ++
-        //expense --
-        $amount=$validated['type']==='expense'?-abs($validated['amount']):abs($validated['amount']);
 
-        $request->user->transactions()->create([
+        $amount = $validated['type'] === 'expense'
+            ? -abs($validated['amount'])
+            : abs($validated['amount']);
+
+        $request->user()->transactions()->create([  // ✅ BUG 3 FIX: was $request->user (missing parentheses)
             'category_id' => $validated['category_id'] ?? null,
             'description' => $validated['description'] ?? null,
             'amount'      => $amount,
             'type'        => $validated['type'],
             'occurred_at' => $validated['occurred_at'],
         ]);
-        return redirect()->route('transactions.index')->with('sucess','Transactions Added successfully');
+
+        return redirect()->route('transactions.index')
+            ->with('success', 'Transaction added successfully.');  // ✅ BUG 4 FIX: was 'sucess' (typo)
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Request $request,Transaction $transaction)
+    public function edit(Request $request, Transaction $transaction)
     {
-        //
-        //Transaction belong to this user
-        $this->authorizeUser($request,$transaction);
-        $categories=$request->user()->categories()->pluck('name','id');
-        return view ('transactions.edit',compact('transcation','categories'));
+        $this->authorizeUser($request, $transaction);
+        $categories = $request->user()->categories()->pluck('name', 'id');
+        return view('transactions.edit', compact('transaction', 'categories'));  // ✅ BUG 5 FIX: was 'transcation' (typo)
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Transaction $transaction)
     {
         $this->authorizeUser($request, $transaction);
 
         $validated = $request->validate([
-            'category_id' => ['nullable','exists:categories,id'],
-            'description' => ['nullable','string','max:255'],
-            'amount'      => ['required','numeric','min:0.01'],
-            'type'        => ['required','in:income,expense'],
-            'occurred_at' => ['required','date'],
+            'category_id' => ['nullable', 'exists:categories,id'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'amount'      => ['required', 'numeric', 'min:0.01'],
+            'type'        => ['required', 'in:income,expense'],
+            'occurred_at' => ['required', 'date'],
         ]);
 
-        if ($validated['category_id']) {
+        if ($validated['category_id'] ?? null) {
             $request->user()->categories()->findOrFail($validated['category_id']);
         }
 
@@ -124,20 +103,15 @@ class TransactionController extends Controller
         ]);
 
         return redirect()->route('transactions.index')
-            ->with('success','Transaction Updated successfully.');
+            ->with('success', 'Transaction updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-   
-        public function destroy(Request $request, Transaction $transaction)
+    public function destroy(Request $request, Transaction $transaction)
     {
         $this->authorizeUser($request, $transaction);
-
         $transaction->delete();
 
         return redirect()->route('transactions.index')
-            ->with('success','Transaction Deleted successfully.');
+            ->with('success', 'Transaction deleted successfully.');
     }
 }
