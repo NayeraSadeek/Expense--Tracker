@@ -6,6 +6,8 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\CategoryController;
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -41,6 +43,10 @@ Route::middleware(['auth'])->group(function () {
 //     return back()->with('message', 'Verification link sent!');
 // })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
+//Category
+Route::middleware(['auth'])->group(function () {
+    Route::resource('categories', CategoryController::class);
+});
 
 
 require __DIR__.'/auth.php';
