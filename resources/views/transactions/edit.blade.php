@@ -106,10 +106,10 @@
                                            focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white
                                            @error('category_id') border-red-400 @enderror">
                                 <option value="">— Select —</option>
-                                @foreach ($categories as $category)
-                                    <option value="{{ $category->id }}"
-                                            {{ old('category_id', $transaction->category_id) == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
+                               @foreach ($categories as $id => $name)
+                                    <option value="{{ $id }}"
+                                            {{ old('category_id', $transaction->category_id) == $id ? 'selected' : '' }}>
+                                        {{ $name }}
                                     </option>
                                 @endforeach
                             </select>
