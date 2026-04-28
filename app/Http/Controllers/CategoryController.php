@@ -8,7 +8,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
-
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
 class CategoryController extends Controller
 {
     public function index(): View
@@ -29,25 +30,12 @@ class CategoryController extends Controller
         return view('categories.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        Gate::authorize('create', Category::class);
+        // $request->validated() only contains the validated fields
+        auth()->user()->categories()->create($request->validated());
 
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:100',
-                \Illuminate\Validation\Rule::unique('categories')
-                    ->where('user_id', auth()->id()),
-            ],
-            'description' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        auth()->user()->categories()->create($validated);
-
-        return redirect()
-            ->route('categories.index')
+        return redirect()->route('categories.index')
             ->with('success', 'Category created successfully.');
     }
 
@@ -58,26 +46,11 @@ class CategoryController extends Controller
         return view('categories.edit', compact('category'));
     }
 
-    public function update(Request $request, Category $category): RedirectResponse
+    public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
-        Gate::authorize('update', $category);
+        $category->update($request->validated());
 
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:100',
-                \Illuminate\Validation\Rule::unique('categories')
-                    ->where('user_id', auth()->id())
-                    ->ignore($category->id),
-            ],
-            'description' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $category->update($validated);
-
-        return redirect()
-            ->route('categories.index')
+        return redirect()->route('categories.index')
             ->with('success', 'Category updated successfully.');
     }
 

@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Transaction;
 use App\Models\Category;
-
+use App\Http\Requests\StoreTransactionRequest;
+use App\Http\Requests\UpdateTransactionRequest;
 class TransactionController extends Controller
 {
     private function authorizeUser(Request $request, Transaction $transaction): void
@@ -20,7 +21,7 @@ class TransactionController extends Controller
         $transactions = $request->user()
             ->transactions()
             ->with('category')
-            ->orderBy('occurred_at', 'desc')  // ✅ BUG 1 FIX: was 'occured_at' (typo)
+            ->orderBy('occurred_at', 'desc')  
             ->paginate(10);
 
         return view('transactions.index', compact('transactions'));
@@ -34,32 +35,22 @@ class TransactionController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'category_id' => ['nullable', 'exists:categories,id'],
-            'description' => ['nullable', 'string', 'max:255'],
-            'amount'      => ['required', 'numeric', 'min:0.01'],
-            'type'        => ['required', 'in:income,expense'],
-            'occurred_at' => ['required', 'date'],
-        ]);
+        $validated = $request->validated();
 
-        if ($validated['category_id'] ?? null) {
-            $request->user()->categories()->findOrFail($validated['category_id']);
-        }
+            $amount = $validated['type'] === 'expense'
+                ? -abs($validated['amount'])
+                : abs($validated['amount']);
 
-        $amount = $validated['type'] === 'expense'
-            ? -abs($validated['amount'])
-            : abs($validated['amount']);
+            $request->user()->transactions()->create([
+                'category_id' => $validated['category_id'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'amount'      => $amount,
+                'type'        => $validated['type'],
+                'occurred_at' => $validated['occurred_at'],
+            ]);
 
-        $request->user()->transactions()->create([  // ✅ BUG 3 FIX: was $request->user (missing parentheses)
-            'category_id' => $validated['category_id'] ?? null,
-            'description' => $validated['description'] ?? null,
-            'amount'      => $amount,
-            'type'        => $validated['type'],
-            'occurred_at' => $validated['occurred_at'],
-        ]);
-
-        return redirect()->route('transactions.index')
-            ->with('success', 'Transaction added successfully.');  // ✅ BUG 4 FIX: was 'sucess' (typo)
+            return redirect()->route('transactions.index')
+                ->with('success', 'Transaction added successfully.');
     }
 
     public function show(string $id)
@@ -76,34 +67,22 @@ class TransactionController extends Controller
 
     public function update(Request $request, Transaction $transaction)
     {
-        $this->authorizeUser($request, $transaction);
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'category_id' => ['nullable', 'exists:categories,id'],
-            'description' => ['nullable', 'string', 'max:255'],
-            'amount'      => ['required', 'numeric', 'min:0.01'],
-            'type'        => ['required', 'in:income,expense'],
-            'occurred_at' => ['required', 'date'],
-        ]);
+            $amount = $validated['type'] === 'expense'
+                ? -abs($validated['amount'])
+                : abs($validated['amount']);
 
-        if ($validated['category_id'] ?? null) {
-            $request->user()->categories()->findOrFail($validated['category_id']);
-        }
+            $transaction->update([
+                'category_id' => $validated['category_id'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'amount'      => $amount,
+                'type'        => $validated['type'],
+                'occurred_at' => $validated['occurred_at'],
+            ]);
 
-        $amount = $validated['type'] === 'expense'
-            ? -abs($validated['amount'])
-            : abs($validated['amount']);
-
-        $transaction->update([
-            'category_id' => $validated['category_id'] ?? null,
-            'description' => $validated['description'] ?? null,
-            'amount'      => $amount,
-            'type'        => $validated['type'],
-            'occurred_at' => $validated['occurred_at'],
-        ]);
-
-        return redirect()->route('transactions.index')
-            ->with('success', 'Transaction updated successfully.');
+            return redirect()->route('transactions.index')
+                ->with('success', 'Transaction updated successfully.');
     }
 
     public function destroy(Request $request, Transaction $transaction)
