@@ -37,9 +37,7 @@
                                       border-gray-200 dark:border-gray-600
                                       focus:outline-none focus:ring-2 focus:ring-gray-400
                                       {{ $errors->has('name') ? 'border-red-400' : '' }}">
-                        @error('name')
-                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                        @enderror
+                    <x-form-error field="name" />
                     </div>
 
                     {{-- Description --}}
